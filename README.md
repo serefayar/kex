@@ -33,7 +33,7 @@ It is an experimental implementation of ideas explored in a series of writings o
 
 Biscuit Token Specification: https://www.biscuitsec.org/
 
-If this experiment resonates with you, reading the original Biscuit specification is strongly recommended.
+If this experiment resonates with you, reading the original Biscuit specification is worth the time.
 
 ## Why Clojure
 
@@ -103,7 +103,7 @@ A third party appends one more block. It adds nothing but a check. This token is
 
 The authorization succeeds only if the query evaluates to a non-empty result set.
 
-Negative constraints (e.g., "require empty") are intentionally not supported in this PoC. The system follows a strictly positive, monotonic logic model aligned with capability-based design. This keeps the engine simple, predictable, and easier to reason about.
+Negative constraints (e.g., "require empty") are intentionally not supported in this PoC. The system follows a positive, monotonic logic model. this keeps it simpler and easier to reason about, though it limits expressiveness.
 
 ### Verify cryptographically
 
