@@ -139,4 +139,3 @@
    It is a pure transformation."
   [explain-tree]
   (graph/explain->graph explain-tree))
-

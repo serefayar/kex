@@ -1,6 +1,6 @@
 # kex
 
-kex is an experimental, data-oriented authorization engine inspired by the Biscuit token model. It implements a minimal capability-based token system with:
+kex is an experimental, data-oriented authorization engine inspired by Biscuit token model. It implements a minimal capability-based token system with:
 
 * Append-only, cryptographically signed blocks
 
@@ -76,12 +76,13 @@ This project exists because Clojure is uniquely suited for this kind of explorat
 (def token
   (kex/issue
     {:facts [[:user "alice"]
-             [:role "alice" :agent]]
-     :rules '[{:id :right-from-role
-               :head [:right ?user :read ?agt]
-               :body [[:role ?user :agent]
-                      [:internal-agent ?agt]]}]
-     :checks []}
+            [:role "alice" :agent]
+            [:internal-agent "bob"]]
+    :rules '[{:id :right-from-role
+              :head [:right ?user :read ?agt]
+              :body [[:role ?user :agent]
+                     [:internal-agent ?agt]]}]
+    :checks []}
 
     {:private-key (:priv keypair)}))
 ```
@@ -94,8 +95,10 @@ This project exists because Clojure is uniquely suited for this kind of explorat
 (def restricted-token
   (kex/attenuate
     token
-    {:facts [[:internal-agent "bob"]
-             [:can "alice" :read "endpoint-1"]]
+    {:facts [[:user "bob"]
+            [:role "bob" :agent]
+            [:internal-agent "alice"]
+            [:can "alice" :read "endpoint-1"]]
     :rules []
     :checks '[]}
 
@@ -109,10 +112,9 @@ This project exists because Clojure is uniquely suited for this kind of explorat
 (def auth-token 
  (kex/attenuate
     restricted-token
-    {:checks
-      [{:id :can-read-endpoint-1
-        :query '[[:right ?user :read "bob"] 
-                [:can ?user :read "endpoint-1"]]}]}
+    {:checks [{:id :can-read-endpoint-1
+               :query '[[:right ?user :read "bob"]
+                        [:can ?user :read "endpoint-1"]]}]}
     
   {:private-key (:priv keypair)}))
 ```
