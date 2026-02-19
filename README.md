@@ -29,7 +29,7 @@ It is an experimental implementation of ideas explored in a series of writings o
 * [De-mystifying Agentic AI: Building a Minimal Agent Engine from Scratch with Clojure](https://serefayar.substack.com/p/minimal-agent-engine-from-scratch-with-clojure?r=359n9q)
 * [OCapN and Structural Authority in Agentic AI](https://serefayar.substack.com/p/ocapn-and-structural-authority-in-agentic-ai?r=359n9q)
 * [Interpreting OCapN Principles in Cloud-Native Agentic AI Architectures](https://serefayar.substack.com/p/interpreting-ocapn-principles-in-cloud-native-agentic-ai)
-* [Reconstructing Biscuit Token in Clojure](https://serefayar.substack.com/p/reconstructing-biscuit-token-in-clojure)
+* [Reconstructing Biscuit in Clojure](https://serefayar.substack.com/p/reconstructing-biscuit-in-clojure)
 
 Biscuit Token Specification: https://www.biscuitsec.org/
 
