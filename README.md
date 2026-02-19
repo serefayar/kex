@@ -78,7 +78,7 @@ A second service appends a new block. It adds facts about what Alice can access,
   (kex/attenuate
     token
     {:facts  [[:internal-agent "bob"]
-              [:can "alice" :read "endpoint-1"]]
+              [:can "alice" :read "web-search"]]
      :rules  '[{:id   :can-implies-right
                 :head [:right ?user :read ?res]
                 :body [[:can ?user :read ?res]]}]
@@ -88,7 +88,7 @@ A second service appends a new block. It adds facts about what Alice can access,
 
 ### Add a check
 
-A third party appends one more block. It adds nothing but a check. This token is only valid if Alice can read endpoint-1.
+A third party appends one more block. It adds nothing but a check. This token is only valid if Alice can access Bob's web-search tool.
 
 ```clojure
 (def auth-token
@@ -96,8 +96,8 @@ A third party appends one more block. It adds nothing but a check. This token is
     delegated-token
     {:facts  []
      :rules  []
-     :checks [{:id    :can-read-endpoint-1
-               :query '[[:right "alice" :read "endpoint-1"]]}]}
+     :checks [{:id :can-read-web-search
+               :query '[[:right "alice" :read "web-search"]]}]}
     {:private-key (:priv keypair)}))
 ```
 
