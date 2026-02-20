@@ -20,7 +20,10 @@ kex is not:
 * Recursive Datalog complete
 * Revocation-ready
 
-It also does not fully enforce attenuation. A new block can add broader facts that expand authority if no check prevents it. In Biscuit, block isolation prevents this; a new block cannot see or override facts from another block's private scope. In kex, that isolation is not implemented.
+Block isolation is implemented via namespace-based fact visibility.
+Facts marked `:public/` propagate across blocks. Facts marked `:private/`
+are scoped to their block. This differs from Biscuit's cryptographic
+block scoping but provides a practical approximation for exploration purposes.
 
 It is intentionally a small, inspectable system designed for exploration, learning, and conceptual validation, not spec compliance or production guarantees.
 
@@ -51,8 +54,8 @@ Clojure is well suited for this kind of exploration.
 
 ### Issue a token
 
-The issuer creates the first block. It defines who Alice is and what agents are allowed to do.
-
+The issuer creates the first block. Facts marked with `:public/` propagate
+to subsequent blocks. Facts marked with `:private/` are scoped to this block only.
 ```clojure
 (require '[kex.core :as kex])
 
@@ -60,61 +63,58 @@ The issuer creates the first block. It defines who Alice is and what agents are 
 
 (def token
   (kex/issue
-    {:facts  [[:user "alice"] [:role "alice" :agent]]
+    {:facts  [[:public/user "alice"]
+              [:public/role "alice" :agent]
+              [:private/issuer-id "orchestrator-001"]]
      :rules  '[{:id   :agent-can-read-agents
-                :head [:right ?user :read ?agt]
-                :body [[:role ?user :agent]
-                       [:internal-agent ?agt]]}]
+                :head [:public/right ?user :read ?agt]
+                :body [[:public/role ?user :agent]
+                       [:public/internal-agent ?agt]]}]
      :checks []}
     {:private-key (:priv keypair)}))
 ```
 
 ### Attenuate the token
 
-A second service appends a new block. It adds facts about what Alice can access, and a rule that derives read rights from those facts. Because kex collects all facts and rules from all blocks into a single pool before evaluation, this block's facts and rules will be combined with the first block's during derivation.
-
+A second service appends a new block. It can see public facts from the
+previous block, and can add its own facts and rules. Private facts from
+the first block are not visible here.
 ```clojure
 (def delegated-token
   (kex/attenuate
     token
-    {:facts  [[:internal-agent "bob"]
-              [:can "alice" :read "web-search"]]
+    {:facts  [[:public/internal-agent "bob"]
+              [:public/can "alice" :read "web-search"]
+              [:private/delegation-note "limited to web tools only"]]
      :rules  '[{:id   :can-implies-right
-                :head [:right ?user :read ?res]
-                :body [[:can ?user :read ?res]]}]
+                :head [:public/right ?user :read ?res]
+                :body [[:public/can ?user :read ?res]]}]
      :checks []}
     {:private-key (:priv keypair)}))
 ```
 
 ### Add a check
 
-A third party appends one more block. It adds nothing but a check. This token is only valid if Alice can access Bob's web-search tool.
-
+A third party appends one more block with a check only. The check query
+uses public facts, which is the only fact space visible across blocks.
 ```clojure
 (def auth-token
   (kex/attenuate
     delegated-token
     {:facts  []
      :rules  []
-     :checks [{:id :can-read-web-search
-               :query '[[:right "alice" :read "web-search"]]}]}
+     :checks [{:id    :can-read-web-search
+               :query '[[:public/right "alice" :read "web-search"]]}]}
     {:private-key (:priv keypair)}))
 ```
 
-The authorization succeeds only if the query evaluates to a non-empty result set.
-
-Negative constraints (e.g., "require empty") are intentionally not supported in this PoC. The system follows a positive, monotonic logic model. this keeps it simpler and easier to reason about, though it limits expressiveness.
-
 ### Verify cryptographically
-
 ```clojure
-;; If this returns false, evaluation must stop.
 (kex/verify auth-token {:public-key (:pub keypair)})
 ;; => true
 ```
 
 ### Evaluate authorization
-
 ```clojure
 (def decision
   (kex/evaluate auth-token :explain? true))
@@ -124,21 +124,73 @@ Negative constraints (e.g., "require empty") are intentionally not supported in 
 ```
 
 ### Inspect the proof
-
 ```clojure
-;; Returns a structured explanation tree showing why the check passed or failed.
 (:explain decision)
+;; =>
+;; {:type     :check
+;;  :check-id :can-read-web-search
+;;  :result   :pass
+;;  :because  {:fact   [:public/right "alice" :read "web-search"]
+;;             :origin :derived
+;;             :rule   :can-implies-right
+;;             :env {?user "alice", ?res "web-search"},
+;;             :proof  [{:type   :fact
+;;                       :fact   [:public/can "alice" :read "web-search"]
+;;                       :origin :authority}]}}
 ```
+
+Private facts never appear in the proof tree. They do not propagate
+beyond their block and never enter the evaluation scope of subsequent blocks.
 
 ### Convert explanation to a graph
+```clojure
+(def graph (kex/graph (:explain decision)))
+;; => {:root  :n1
+;;     :nodes {:n1 {:id :n1 :kind :check       :check-id :can-read-web-search ...}
+;;             :n2 {:id :n2 :kind :derived-fact :fact [:public/right "alice" :read "web-search"] ...}
+;;             :n3 {:id :n3 :kind :authority-fact :fact [:public/can "alice" :read "web-search"]}}
+;;     :edges [{:from :n1 :to :n2 :label :because}
+;;             {:from :n2 :to :n3 :label :because}]}
+```
+
+### Private facts in derivation
+A rule can use private facts to derive public ones. The derived fact propagates forward, but the private fact that contributed to it is redacted in the proof tree. This ensures private block data does not leak to downstream agents, audit systems, or logs.
 
 ```clojure
-;; This can be visualized with Graphviz or similar tools.
-(def graph
-  (kex/graph (:explain decision)))
+(def token-with-private
+  (kex/issue
+    {:facts  [[:public/user "alice"]
+              [:private/clearance-level "alice" :top-secret]]
+     :rules  '[{:id   :clearance-implies-right
+                :head [:public/right ?user :read :classified-docs]
+                :body [[:private/clearance-level ?user :top-secret]]}]
+     :checks [{:id    :can-read-classified
+               :query '[[:public/right "alice" :read :classified-docs]]}]}
+    {:private-key (:priv keypair)}))
 
-;; => {:root :n1 :nodes {...} :edges [...]}
+(kex/verify token-with-private {:public-key (:pub keypair)})
+;; => true
+
+(def decision (kex/evaluate token-with-private :explain? true))
+
+(:valid? decision)
+;; => true
+
+(:explain decision)
+;; =>
+;; {:type     :check
+;;  :check-id :can-read-classified
+;;  :result   :pass
+;;  :because  {:fact    [:public/right "alice" :read :classified-docs]
+;;             :origin  :derived
+;;             :rule    :clearance-implies-right
+;;             :env     {?user "alice"}
+;;             :proof   [{:type      :fact
+;;                        :fact      :redacted/private-fact
+;;                        :origin    :authority
+;;                        :redacted? true}]}}
 ```
+The proof tree shows that a private fact contributed to the derivation, but its content is not visible. The derivation chain remains traceable without exposing block-internal data.
 
 ## License
 
