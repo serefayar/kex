@@ -11,7 +11,17 @@
        (str/starts-with? (name var) "?")))
 
 (defn public-fact?
-  "Returns true if the fact's predicate is in the public namespace."
+  "Returns true if the fact should propagate to subsequent blocks.
+
+   Only facts with the :public/ namespace prefix propagate forward,
+   e.g. [:public/role \"alice\" :agent].
+
+   All other facts, including namespace-less facts, are treated as
+   private and scoped to their block. Privacy is the default.
+   Visibility must be explicitly declared using the :public/ prefix.
+
+   This follows a fail-safe principle: a fact that is not explicitly
+   marked public will never leak to downstream blocks or agents."
   [fact]
   (let [pred (first fact)]
     (and (keyword? pred)
