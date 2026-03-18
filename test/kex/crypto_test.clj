@@ -31,7 +31,7 @@
 
 (t/deftest sign-and-verify-test
   (t/testing "valid signature verifies"
-    (let [kp   (sut/generate-keypair)
+    (let [kp   (sut/generate-keypair "Ed25519")
           msg  (.getBytes "important-data")
           sig  (sut/sign (.getPrivate kp) msg)]
       (t/is (true?
@@ -42,7 +42,7 @@
 
 (t/deftest signature-fails-on-data-change
   (t/testing "signature fails if data changes"
-    (let [kp   (sut/generate-keypair)
+    (let [kp   (sut/generate-keypair "Ed25519")
           msg  (.getBytes "important-data")
           sig  (sut/sign (.getPrivate kp) msg)]
       (t/is (false?
@@ -53,8 +53,8 @@
 
 (t/deftest signature-fails-with-wrong-key
   (t/testing "signature fails with wrong public key"
-    (let [kp1  (sut/generate-keypair)
-          kp2  (sut/generate-keypair)
+    (let [kp1  (sut/generate-keypair "Ed25519")
+          kp2  (sut/generate-keypair "Ed25519")
           msg  (.getBytes "important-data")
           sig  (sut/sign (.getPrivate kp1) msg)]
       (t/is (false?
@@ -66,7 +66,7 @@
 
 (t/deftest authority-block-test
   (t/testing "authority block is self-contained and signed"
-    (let [kp   (sut/generate-keypair)
+    (let [kp   (sut/generate-keypair "Ed25519")
           blk  (block/authority-block
                  [[:user "alice"]]
                  []
@@ -78,7 +78,7 @@
 
 (t/deftest delegated-block-links-to-previous
   (t/testing "delegated block links to previous hash"
-    (let [kp   (sut/generate-keypair)
+    (let [kp   (sut/generate-keypair "Ed25519")
           b0   (block/authority-block
                  [[:user "alice"]]
                  []
@@ -94,7 +94,7 @@
 
 (t/deftest verify-chain-valid
   (t/testing "valid block chain verifies"
-    (let [kp   (sut/generate-keypair)
+    (let [kp   (sut/generate-keypair "Ed25519")
           pub  (.getPublic kp)
           b0   (block/authority-block
                  [[:user "alice"]]
@@ -112,7 +112,7 @@
 
 (t/deftest verify-chain-fails-on-tampered-block
   (t/testing "tampered block breaks chain"
-    (let [kp   (sut/generate-keypair)
+    (let [kp   (sut/generate-keypair "Ed25519")
           pub  (.getPublic kp)
           b0   (block/authority-block
                  [[:user "alice"]]
@@ -132,7 +132,7 @@
 
 (t/deftest verify-chain-fails-on-reordered-blocks
   (t/testing "reordering blocks breaks chain"
-    (let [kp   (sut/generate-keypair)
+    (let [kp   (sut/generate-keypair "Ed25519")
           pub  (.getPublic kp)
           b0   (block/authority-block
                  [[:user "alice"]]
