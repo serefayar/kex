@@ -29,7 +29,7 @@
 
 (s/def ::hash
   (s/and bytes?
-         #(= 32 (alength ^bytes %))))  ;; SHA-256
+         #(= 32 (alength ^bytes %))))
 
 (s/def ::sig
   bytes?)
@@ -54,43 +54,21 @@
 (s/def ::token
   (s/coll-of ::block :kind vector?))
 
-
-
-(comment
-
-  (require '[kex.core :as kex])
-
-  (def keypair (kex/new-keypair))
-
-  (def token
-    (kex/issue
-     {:facts  [[:user "alice"] [:role "alice" :agent]]
-      :rules  '[{:id   :agent-can-read-agents
-                 :head [:right ?user :read ?agt]
-                 :body [[:role ?user :agent]
-                        [:internal-agent ?agt]]}]
-      :checks []}
-     {:private-key (:priv keypair)}))
-
-  (s/valid? ::authority-block (first token))
-  )
-  
-
-(defn authority-block?
+(defn- authority-block?
   [block]
   (nil? (:prev block)))
 
 (s/def ::authority-block
   (s/and ::block authority-block?))
 
-(defn delegated-block?
+(defn- delegated-block?
   [block]
   (some? (:prev block)))
 
 (s/def ::delegated-block
   (s/and ::block delegated-block?))
 
-(defn valid-chain-shape?
+(defn- valid-chain-shape?
   [blocks]
   (and
    (seq blocks)
@@ -104,7 +82,6 @@
   (s/and
    ::token
    valid-chain-shape?))
-
 
 (s/fdef block/authority-block
   :args (s/cat
@@ -134,13 +111,10 @@
          :public-key any?)
   :ret boolean?)
 
-
-
 (def ^:private fns-with-specs
   [`block/authority-block
    `block/delegated-block
-   `block/verify-chain
-   ])
+   `block/verify-chain])
 
 (defn instrument []
   (st/instrument fns-with-specs))
